@@ -6,15 +6,19 @@ jobs:
 
     strategy:
       matrix:
-        # Nim requires enforcing ARCH="x86"
+        # Nim requires enforcing ARCH="x86" and ucpu
         # for 32-bit target as it seems like the machine is 64-bit
         STABLE-32bit:
+          ARCH: x86
+          CPU: i386
           PLATFORM: x86
           CHANNEL: stable
         STABLE-64bit:
           PLATFORM: x64
           CHANNEL: stable
         DEVEL-32bit:
+          ARCH: x86
+          CPU: i386
           PLATFORM: x86
           CHANNEL: devel
         DEVEL-64bit:
@@ -40,7 +44,6 @@ jobs:
           set -e
           echo "Installing MinGW-w64"
           if [[ $PLATFORM == "x86" ]]; then
-            export ARCH="x86"
             MINGW_FILE="i686-8.1.0-release-posix-dwarf-rt_v6-rev0.7z"
             MINGW_URL="https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/8.1.0/threads-posix/dwarf/${MINGW_FILE}"
             MINGW_DIR="mingw32"
@@ -61,6 +64,7 @@ jobs:
           popd
           export PATH="/c/custom/${MINGW_DIR}/bin:$PATH"
 
+      - bash: |
           echo "Building Nim"
           if [ "${CHANNEL}" = stable ]; then
             BRANCH="v$(curl https://nim-lang.org/channels/stable)"
@@ -73,9 +77,7 @@ jobs:
             git clone -b "${BRANCH}" https://github.com/nim-lang/nim "nim-${CHANNEL}/"
             pushd "nim-${CHANNEL}"
             git clone --depth 1 https://github.com/nim-lang/csources csources/
-            pushd csources
-            sh build.sh
-            popd
+            make -C csources -j $ncpu ucpu=$(CPU)
             rm -rf csources
             bin/nim c koch
             ./koch boot -d:release

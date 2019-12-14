@@ -77,7 +77,7 @@ jobs:
             git clone -b "${BRANCH}" https://github.com/nim-lang/nim "nim-${CHANNEL}/"
             pushd "nim-${CHANNEL}"
             git clone --depth 1 https://github.com/nim-lang/csources csources/
-            make -C csources -j $ncpu ucpu=$(CPU)
+            make -C csources -j $ncpu CC=gcc ucpu=$(CPU)
             rm -rf csources
             bin/nim c koch
             ./koch boot -d:release

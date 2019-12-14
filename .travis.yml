@@ -1,7 +1,11 @@
 # Travis config for Synthesis
 language: c
 
-cache: ccache
+cache:
+  ccache
+  directories:
+    - nim-devel
+    - nim-stable
 
 matrix:
   include:
@@ -28,23 +32,46 @@ matrix:
 
   allow_failures:
     # Ignore failures when building against the devel Nim branch
-    # Also ignore OSX, due to very long build time and random homebrew errors
     - env: CHANNEL=devel
-    - os: osx
   fast_finish: true
 
-install:
-  - export CHOOSENIM_NO_ANALYTICS=1
-  - curl https://nim-lang.org/choosenim/init.sh -sSf > init.sh
-  - sh init.sh -y
-  - export PATH=~/.nimble/bin:$PATH
-  - echo "export PATH=~/.nimble/bin:$PATH" >> ~/.profile
-  - choosenim $CHANNEL
+before_install:
+  - |
+    if [ "${CHANNEL}" = stable ]; then
+      BRANCH="v$(curl https://nim-lang.org/channels/stable)"
+    else
+      BRANCH="${CHANNEL}"
+    fi
 
+install:
+  # Detect caching of Nim compiler
+  - |
+    if [ ! -x "nim-${CHANNEL}/bin/nim" ]; then
+      git clone -b "${BRANCH}" https://github.com/nim-lang/nim "nim-${CHANNEL}/"
+      pushd "nim-${CHANNEL}"
+      git clone --depth 1 https://github.com/nim-lang/csources csources/
+      pushd csources
+      sh build.sh
+      popd
+      rm -rf csources
+      bin/nim c koch
+      ./koch boot -d:release
+      ./koch tools
+    else
+      pushd "nim-${CHANNEL}"
+      git fetch origin "${BRANCH}"
+      if ! git merge FETCH_HEAD | grep "Already up.to.date"; then
+        bin/nim c koch
+        ./koch boot -d:release
+        ./koch tools
+      fi
+    fi
+    popd
+before_script:
+    - export PATH="nim-${CHANNEL}/bin${PATH:+:$PATH}"
 script:
     - nimble refresh
     - nimble test
-
 branches:
   except:
     - gh-pages

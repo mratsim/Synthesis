@@ -1,10 +1,27 @@
 # Synthesis
 
-This is a support library for the [Weave](https://github.com/mratsim/weave) multithreading runtime
+[![License: Apache](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+![Stability: experimental](https://img.shields.io/badge/stability-experimental-orange.svg)
 
-This contains support macros to synthesize static procedure-based automata from
+This is a support library for the [Weave](https://github.com/mratsim/weave) multithreading runtime.
+Requirements for a multithreading runtime makes Synthesis also an excellent fit
+to generate state machines for embedded devices, protocols
+and managing complex event-driven workloads in general.
+
+This package exports a set of macros to synthesize static procedure-based automata from
 a declarative description of states, triggers and transitions
 with all states, triggers and transitions known at compile-time.
+
+It is fast, composable, generates compact code and does not allocate on the heap.
+
+Within each states you also have the full power
+of the Nim language instead of being restricted to only operations
+supported by a custom domain-specific language.
+
+The generated state machine is a procedure, with parameters of your choosing that access in your states.
+You can easily call other procedures to build nested state machines or
+introduce a stack of past states to create a pushdown automata (for parsing Brainfuck or JSON for example).
 
 A detailed usage tutorial is available at [examples/water_phase_transitions.nim](). It is executable.
 

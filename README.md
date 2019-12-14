@@ -153,7 +153,7 @@ synthesize(waterMachine):
 import random, sequtils
 
 echo "\n"
-# Create 20 random temperature obeservations.
+# Create 20 random temperature observations.
 var obs = newSeqWith(20, rand(-50.0..150.0))
 echo obs
 echo "\n"

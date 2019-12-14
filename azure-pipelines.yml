@@ -64,6 +64,7 @@ jobs:
           else
             BRANCH="${CHANNEL}"
           fi
+          mkdir -p NimBinaries
           pushd NimBinaries
           if [ ! -x "nim-${CHANNEL}/bin/nim" ]; then
             git clone -b "${BRANCH}" https://github.com/nim-lang/nim "nim-${CHANNEL}/"

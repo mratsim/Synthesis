@@ -2,7 +2,6 @@
 language: c
 
 cache:
-  ccache
   directories:
     - nim-devel
     - nim-stable

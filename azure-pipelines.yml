@@ -1,0 +1,96 @@
+jobs:
+  - job: Windows
+
+    pool:
+      vmImage: windows-latest
+
+    strategy:
+      matrix:
+        STABLE-32bit:
+          PLATFORM: x86
+          CHANNEL: stable
+        STABLE-64bit:
+          PLATFORM: x64
+          CHANNEL: stable
+        DEVEL-32bit:
+          PLATFORM: x86
+          CHANNEL: devel
+        DEVEL-64bit:
+          PLATFORM: x64
+          CHANNEL: devel
+    steps:
+      - task: CacheBeta@1
+        displayName: 'cache Nim binaries'
+        inputs:
+          key: NimBinaries | $(Agent.OS) | $(CHANNEL) | $(PLATFORM)
+          path: NimBinaries
+
+      - task: CacheBeta@1
+        displayName: 'cache MinGW-w64'
+        inputs:
+          key: mingwCache | 8_1_0 | $(PLATFORM)
+          path: mingwCache
+
+      - powershell: |
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name 'LongPathsEnabled' -Value 1
+        displayName: 'long path support'
+      - bash: |
+          set -e
+          echo "Installing MinGW-w64"
+          if [[ $PLATFORM == "x86" ]]; then
+            MINGW_FILE="i686-8.1.0-release-posix-dwarf-rt_v6-rev0.7z"
+            MINGW_URL="https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/8.1.0/threads-posix/dwarf/${MINGW_FILE}"
+            MINGW_DIR="mingw32"
+          else
+            MINGW_FILE="x86_64-8.1.0-release-posix-seh-rt_v6-rev0.7z"
+            MINGW_URL="https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/8.1.0/threads-posix/seh/${MINGW_FILE}"
+            MINGW_DIR="mingw64"
+          fi
+          mkdir -p mingwCache
+          pushd mingwCache
+          if [[ ! -e "$MINGW_FILE" ]]; then
+            rm -f *.7z
+            curl -OLsS "$MINGW_URL"
+          fi
+          7z x -y -bd "$MINGW_FILE" >/dev/null
+          mkdir -p /c/custom
+          mv "$MINGW_DIR" /c/custom/
+          popd
+          export PATH="/c/custom/${MINGW_DIR}/bin:$PATH"
+
+          echo "Building Nim"
+          if [ "${CHANNEL}" = stable ]; then
+            BRANCH="v$(curl https://nim-lang.org/channels/stable)"
+          else
+            BRANCH="${CHANNEL}"
+          fi
+          pushd NimBinaries
+          if [ ! -x "nim-${CHANNEL}/bin/nim" ]; then
+            git clone -b "${BRANCH}" https://github.com/nim-lang/nim "nim-${CHANNEL}/"
+            pushd "nim-${CHANNEL}"
+            git clone --depth 1 https://github.com/nim-lang/csources csources/
+            pushd csources
+            sh build.sh
+            popd
+            rm -rf csources
+            bin/nim c koch
+            ./koch boot -d:release
+            ./koch tools
+          else
+            pushd "nim-${CHANNEL}"
+            git fetch origin "${BRANCH}"
+            if ! git merge FETCH_HEAD | grep "Already up.to.date"; then
+              bin/nim c koch
+              ./koch boot -d:release
+              ./koch tools
+            fi
+          fi
+          popd
+          popd
+          export PATH="NimBinaries/nim-${CHANNEL}/bin${PATH:+:$PATH}"
+
+          echo "Testing"
+          nimble.exe refresh
+          nimble.exe test
+
+        displayName: 'build and test'

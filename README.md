@@ -1,5 +1,6 @@
 # Synthesis
-[![Build Status: Travis](https://img.shields.io/travis/com/mratsim/Synthesis?label=Travis%20%28Linux%2FMac%20-%20x86%2FARM%29)](https://travis-ci.com/mratsim/Synthesis)
+[![Build Status: Travis](https://img.shields.io/travis/com/mratsim/Synthesis?label=Travis%20%28Linux%2FMac%20-%20x86_64%2FARM64%29)](https://travis-ci.com/mratsim/Synthesis)
+[![Build Status: Travis](https://img.shields.io/azure-devops/tests/numforge/Synthesis/1?label=Azure%20%28Windows%2032-bit%2F64-bit%29)](https://dev.azure.com/numforge/Synthesis/_build/latest?definitionId=1&branchName=master)
 [![License: Apache](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 ![Stability: experimental](https://img.shields.io/badge/stability-experimental-orange.svg)

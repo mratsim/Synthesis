@@ -2,29 +2,200 @@
 
 This is a support library for the [Weave](https://github.com/mratsim/weave) multithreading runtime
 
-This contains support macros to synthesize static automata from
+This contains support macros to synthesize static procedure-based automata from
 a declarative description of states, triggers and transitions
 with all states, triggers and transitions known at compile-time.
+
+A detailed usage tutorial is available at [examples/water_phase_transitions.nim](). It is executable.
+
+Snippets:
+```Nim
+type Phase = enum
+  ## States of your automaton.
+  ## The terminal state does not need to be defined
+  Solid
+  Liquid
+  Gas
+  Plasma # Plasma is almost unused
+
+type Event = enum
+  ## Named events. They will be associated with a boolean expression.
+  Over100
+  Between0and100
+  Below0
+  OutOfWater
+
+# Common configuration
+# -------------------------------------------
+
+# Create a "waterMachine" entry.
+declareAutomaton(waterMachine, Phase, Event)
+
+# Optionally setup the "prologue". Extra state goes there, the variables are visible by all.
+setPrologue(waterMachine):
+  echo "Welcome to the Steamy machine version 2000!\n"
+  var temp: float64
+
+# Mandatory initial state. This must be one of the valid state of the state enum ("Phase" in our case)
+setInitialState(waterMachine, Liquid)
+
+# Terminal state is mandatory. It's a pseudo state and does not have to be part of the state enum.
+setTerminalState(waterMachine, Exit)
+
+# Optionally setup the "epilogue". Cleaning up what was setup in the prologue goes there.
+setEpilogue(waterMachine):
+  echo "Now I need some coffee."
+
+# Events
+# -------------------------------------------
+
+implEvent(waterMachine, OutOfWater):
+  tempFeed.len == 0
+
+implEvent(waterMachine, Between0and100):
+  0 < temp and temp < 100
+
+implEvent(waterMachine, Below0):
+  temp < 0
+
+implEvent(waterMachine, Over100):
+  100 < temp
+
+# `onEntry` and `onExit` hooks
+# -------------------------------------------
+#
+# Those are applied on each state entry, before conditions are checked
+# and on each state exits. The only exceptions are "interrupt" behaviours.
+
+onEntry(waterMachine, [Solid, Liquid, Gas]):
+  let oldTemp = temp
+  temp = tempFeed.pop()
+  echo "Temperature: ", temp
+
+# `behaviors`
+# -------------------------------------------
+#
+# Interrupts are special triggers which ignores onEntry/onExit
+#
+# They allow the normal operations to make assumptions like
+# a container not being empty or a value being available.
+#
+# They are also suitable to handle termination signals.
+
+behavior(waterMachine):
+  ini: [Solid, Liquid, Gas, Plasma]
+  fin: Exit
+  interrupt: OutOfWater
+  transition:
+    echo "Running out of steam ..."
+
+# Conditional state change, depending on temperature.
+behavior(waterMachine):
+  ini: Solid
+  fin: Liquid
+  event: Between0and100
+  transition:
+    assert 0 <= temp and temp <= 100
+    echo "Ice is melting into Water.\n"
+
+behavior(waterMachine):
+  ini: Liquid
+  fin: Gas
+  event: Over100
+  transition:
+    assert temp >= 100
+    echo "Water is vaporizing into Vapor.\n"
+
+#...
+
+# Steady state, if no phase change was triggered, we stay in our current phase
+behavior(waterMachine):
+  steady: [Solid, Liquid, Gas]
+  transition:
+    # Note how we use the oldTemp that was declared in `onEntry`
+    echo "Changing temperature from ", oldTemp, " to ", temp, " didn't change phase. How exciting!\n"
+
+# `Synthesize`
+# -------------------------------------------
+# Synthesizing the automaton will transform the previous specification
+# into a concrete procedure with a name, type and inputs of your choosing.
+#
+# Assertions are inserted to ensure the automaton
+# stops if a state+event combination was not handled.
+#
+# You can pass "-d:debugSynthesis" to view the state machine generated
+# at compile-time.
+#
+# The generated code can also be copy-pasted for debugging or for further refining.
+synthesize(waterMachine):
+  proc observeWater(tempFeed: var seq[float])
+
+# Running the machine
+# -------------------------------------------
+import random, sequtils
+
+echo "\n"
+# Create 20 random temperature obeservations.
+var obs = newSeqWith(20, rand(-50.0..150.0))
+echo obs
+echo "\n"
+observeWater(obs)
+
+# Output
+# -------------------------------------------
+# @[-3.460770047808822, 114.5693402308219, 16.66758940395412, 147.8992369379481, 38.74529893378966, -34.83679531473696, 68.73127270016445, -10.89306136942781, 55.17781700115015, 114.8825749296374, 86.88038583504948, 47.98729291960338, -40.94605405014646, 141.4807806383724, -19.78255259056119, -1.654260475969281, 37.0554825533913, 80.74588296425821, -7.707680239048244, 37.63170603752019]
+
+# Welcome to the Steamy machine version 2000!
+#
+# Temperature: 37.63170603752019
+# Changing temperature from 0.0 to 37.63170603752019 didn't change phase. How exciting!
+#
+# Temperature: -7.707680239048244
+# Water is freezing into Ice.
+#
+# Temperature: 80.74588296425821
+# Ice is melting into Water.
+#
+# Temperature: 37.0554825533913
+# Changing temperature from 80.74588296425821 to 37.0554825533913 didn't change phase. How exciting!
+#
+# Temperature: -1.654260475969281
+# Water is freezing into Ice.
+#
+# Temperature: -19.78255259056119
+# Changing temperature from -1.654260475969281 to -19.78255259056119 didn't change phase. How exciting!
+#
+# Temperature: 141.4807806383724
+# Ice is sublimating into Vapor.
+# ...
+```
 
 ## Technical constraints
 
 The state machine is used as the core of a multithreading runtime:
-- Must be thread-safe
-- No heap allocation
+- Threading friendly:
+  - No GC or memory management on the heap
+
 - Easy to map to model checking and formal verification via clearly labeled: states, events, transitions.
 
   Multithreading is complex and the more we can prove properties (like the absence of deadlocks or livelocks)
   the more confidence we can have in the runtime.
-- Extremely fast and very low-overhead, as overhead in the state machine means more latency in scheduling work. Furthermore, slowness effects are "scaled" by the number of cores.
+
+- Extremely fast and very low CPU-overhead, as overhead in the state machine means more latency in scheduling work. Furthermore, slowness effects are "scaled" by the number of cores.
 
 - Extensibility: as runtime requirements grow (distributed clusters, heterogeneous computing, fine-grained barriers, IO, continuations, cancellations,...),
 
   Synthesis should help minimizing the potential for entangled control-flow
   and missing edge-cases.
 
-Synthesis generates an automaton using gotos for transitions:
+Synthesis generates a procedure-based automaton using gotos for transitions:
   - This avoids function calls/returns pushing/poping stack overhead
   - and switch dispatch branch prediction miss due to having a single point of dispatch..
+
+In addition to the multithreading runtime requirements this architecture
+allow Synthesis to produce code with a very low footprint which makes it suitable for embedded.
+Furthermore, setPrologue/setEpilogue/onEntry/onExit and the transitions are very flexible, they can
+use inline statements, declare new variables or defer computation to one or more procs.
 
 ## References
 - [Mealy State Machine](https://en.wikipedia.org/wiki/Mealy_machine)

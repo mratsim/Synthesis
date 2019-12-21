@@ -156,7 +156,6 @@ steps:
   - bash: |
       echo "PATH=${PATH}"
       nimble refresh
-      nimble install cligen || true
     displayName: 'Building the package dependencies'
 
   - bash: |

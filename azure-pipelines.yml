@@ -160,5 +160,6 @@ steps:
 
   - bash: |
       echo "PATH=${PATH}"
+      export ucpu=${UCPU}
       nimble test
     displayName: 'Testing the package'

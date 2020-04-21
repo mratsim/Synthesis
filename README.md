@@ -189,11 +189,45 @@ observeWater(obs)
 # ...
 ```
 
+## Displaying the state machine
+
+It is possible to display the finite state machine using Graphviz.
+Synthesis representation can be converted to Graphviz ".dot" (or ".gv") with `toGraphviz`
+
+Using the previous `waterMachine`
+```Nim
+const dotRepr = toGraphviz(waterMachine)
+writeFile("water_phase_transitions.dot", dotRepr)
+```
+
+Note: The conversion is done at compile-time and stored in a string.
+
+To convert the graph described in the graphviz file to a `.png` use the following command (assuming a shell and graphviz package being installed)
+```sh
+dot -Tpng water_phase_transitions.dot -o water_phase_transitions.png
+```
+For SVG
+```sh
+dot -Tsvg water_phase_transitions.dot -o water_phase_transitions.svg
+```
+
+A default style is used to differentiate between states, interrupts (exceptional events) and regular events/triggers.
+
+
+Output of the waterMachine
+
+![water state transitions](examples/water_phase_transitions.png)
+
+Alternative to Graphviz can be used on the `.dot` files if the output is unsatisfactory. Remember that graph node placement is usually an NP-complete task and requires heuristics to be solved that may not be optimal for your specific graph. In that case consider splitting your finite state machine hence building hierarchical state machines.
+
 ## Technical constraints
 
 The state machine is used as the core of a multithreading runtime:
 - Threading friendly:
   - No GC or memory management on the heap
+
+- Visual debugging via printing the graph to ensure that all events are handled
+  and no state leads to an unreachable code path.
 
 - Easy to map to model checking and formal verification via clearly labeled: states, events, transitions.
 
@@ -208,7 +242,7 @@ The state machine is used as the core of a multithreading runtime:
   and missing edge-cases.
 
 Synthesis generates a procedure-based automaton using gotos for transitions:
-  - This avoids function calls/returns pushing/poping stack overhead
+  - This avoids function calls/returns and associated pushing/poping stack overhead
   - and switch dispatch branch prediction miss due to having a single point of dispatch..
 
 In addition to the multithreading runtime requirements this architecture

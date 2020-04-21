@@ -1,0 +1,44 @@
+digraph waterMachine{
+    splines=ortho;
+    node [shape = doublecircle]; InitialState Exit;
+    node [shape = circle, fontcolor=white, fillcolor=darkslategrey, style="filled"]; Plasma Gas Solid Liquid;
+    InitialState -> Liquid [color="black:invis:black", xlabel="entry point"];
+    node [shape = octagon, fontcolor=black, fillcolor=lightsteelblue, style="rounded,filled"]; Gas_Below0 Gas_Between0and100 Solid_Between0and100 Solid_Over100 Liquid_Over100 Liquid_Below0 ;
+    node [shape = diamond, fontcolor=black, fillcolor=coral, style="rounded,filled"]; Plasma_OutOfWater Gas_OutOfWater Solid_OutOfWater Liquid_OutOfWater ;
+    Gas_Below0 [label="Below0\ntemp < 0"];
+    Gas_Between0and100 [label="Between0and100\n0 < temp and temp < 100"];
+    Solid_Between0and100 [label="Between0and100\n0 < temp and temp < 100"];
+    Solid_Over100 [label="Over100\n100 < temp"];
+    Liquid_Over100 [label="Over100\n100 < temp"];
+    Liquid_Below0 [label="Below0\ntemp < 0"];
+    Plasma_OutOfWater [label="OutOfWater\nlen(tempFeed) == 0"];
+    Gas_OutOfWater [label="OutOfWater\nlen(tempFeed) == 0"];
+    Solid_OutOfWater [label="OutOfWater\nlen(tempFeed) == 0"];
+    Liquid_OutOfWater [label="OutOfWater\nlen(tempFeed) == 0"];
+
+    node [shape = doubleoctagon, fontcolor=black, fillcolor=white];  Plasma_unreachable;
+    Plasma -> Plasma_OutOfWater[style=bold, xlabel="always"];
+    Plasma_OutOfWater -> Exit [color="coral", fontcolor="coral", xlabel="interrupted"];
+    Plasma_OutOfWater -> Plasma_unreachable [style=dotted, color=grey, xlabel="unreachable"];
+    Gas -> Gas_OutOfWater[style=bold, xlabel="always"];
+    Gas_OutOfWater -> Exit [color="coral", fontcolor="coral", xlabel="interrupted"];
+    Gas_OutOfWater -> Gas_Below0[xlabel="normal flow"];
+    Gas_Below0 -> Solid [style=dashed, xlabel="true"];
+    Gas_Below0 -> Gas_Between0and100[style=dotted, xlabel="false"];
+    Gas_Between0and100 -> Liquid [style=dashed, xlabel="true"];
+    Gas_Between0and100 -> Gas [xlabel="default"];
+    Solid -> Solid_OutOfWater[style=bold, xlabel="always"];
+    Solid_OutOfWater -> Exit [color="coral", fontcolor="coral", xlabel="interrupted"];
+    Solid_OutOfWater -> Solid_Between0and100[xlabel="normal flow"];
+    Solid_Between0and100 -> Liquid [style=dashed, xlabel="true"];
+    Solid_Between0and100 -> Solid_Over100[style=dotted, xlabel="false"];
+    Solid_Over100 -> Gas [style=dashed, xlabel="true"];
+    Solid_Over100 -> Solid [xlabel="default"];
+    Liquid -> Liquid_OutOfWater[style=bold, xlabel="always"];
+    Liquid_OutOfWater -> Exit [color="coral", fontcolor="coral", xlabel="interrupted"];
+    Liquid_OutOfWater -> Liquid_Over100[xlabel="normal flow"];
+    Liquid_Over100 -> Gas [style=dashed, xlabel="true"];
+    Liquid_Over100 -> Liquid_Below0[style=dotted, xlabel="false"];
+    Liquid_Below0 -> Solid [style=dashed, xlabel="true"];
+    Liquid_Below0 -> Liquid [xlabel="default"];
+}

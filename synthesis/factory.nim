@@ -32,7 +32,7 @@ type
   # A function
   TransitionImpl = NimNode
 
-  Automaton = ref object
+  Automaton* = ref object
     ## An automaton is:
     ## - an initial state
     ## - a set of states
@@ -42,6 +42,8 @@ type
     ## - a transition function table which applies the transition function before changing state
     # We cannot use enum typedesc as they trigger early symbol resolution
 
+    # Note: exports are only nedded for graph representation
+
     stateEnum: NimNode
     eventEnum: NimNode
 
@@ -49,22 +51,22 @@ type
     prologue: NimNode
     epilogue: NimNode
     # Starting and terminal state
-    initial: State
-    terminal: State
+    initial*: State
+    terminal*: State
     # Set of states
-    states: Hashset[State]
+    states*: Hashset[State]
     # Events (or absence of) that requires exceptional handling (for example termination or normal input being empty)
-    interrupts: Table[State, seq[Event]]
+    interrupts*: Table[State, seq[Event]]
     # Setup at each state entry
     stateEntries: Table[State, NimNode]
     # Events checked by each state. In order of registration (for conflict resolution)
-    triggers: Table[State, seq[Event]]
+    triggers*: Table[State, seq[Event]]
     # Interrupts and Events implementation (boolean expressions)
-    eventImpls: Table[Event, EventImpl]
+    eventImpls*: Table[Event, EventImpl]
     # (State, Event) -> State mapping
-    condTransitions: Table[(State, Event), State]
+    condTransitions*: Table[(State, Event), State]
     # State -> State mapping
-    defaultTransitions: Table[State, State]
+    defaultTransitions*: Table[State, State]
     # Processing during transition
     condTransitionsFn: Table[(State, Event), TransitionImpl]
     defaultTransitionsFn: Table[State, TransitionImpl]
@@ -122,7 +124,7 @@ macro setTerminalState*(automaton: untyped{nkIdent}, terminalState: untyped{nkId
 
 macro onEntry*(automaton: untyped{nkIdent}, state: typed{nkSym}, stmts: untyped) =
   ## Add a statement that will be executed at each entry of the designated state
-  ## This is not added to circuit breaker transitions
+  ## This is not added to interrupt transitions
   let A = Registry[$automaton]
   let S = $state
   A.states.incl(S)
@@ -130,7 +132,7 @@ macro onEntry*(automaton: untyped{nkIdent}, state: typed{nkSym}, stmts: untyped)
 
 macro onEntry*(automaton: untyped{nkIdent}, states: openarray[typed], stmts: untyped) =
   ## Add a statement that will be executed at each entry of the designated state
-  ## This is not added to circuit breaker transitions
+  ## This is not added to interrupt transitions
   let A = Registry[$automaton]
   for state in states:
     let S = $state
@@ -140,7 +142,7 @@ macro onEntry*(automaton: untyped{nkIdent}, states: openarray[typed], stmts: unt
 macro onExit*(automaton: untyped{nkIdent}, state: typed{nkSym}, stmts: untyped) =
   ## Add a statement that will be executed at each exit points of the designated state
   ## If a state has multiple transitions, those statement will be executed after each transition.
-  ## This is not added to circuit breaker transitions
+  ## This is not added to interrupt transitions
   let A = Registry[$automaton]
   let S = $state
   A.states.incl(S)
@@ -149,7 +151,7 @@ macro onExit*(automaton: untyped{nkIdent}, state: typed{nkSym}, stmts: untyped) 
 macro onExit*(automaton: untyped{nkIdent}, states: openarray[typed], stmts: untyped) =
   ## Add a statement that will be executed at each exit points of the designated state
   ## If a state has multiple transitions, those statement will be executed after each transition.
-  ## This is not added to circuit breaker transitions
+  ## This is not added to interrupt transitions
   let A = Registry[$automaton]
   for state in states:
     let S = $state
@@ -194,7 +196,7 @@ macro addInterrupts*(
   ## that is checked in priority and does not trigger onEntry and onExit hooks.
   ## This is meant for exceptional handling like termination or input being empty.
   ##
-  ## For states that respond the same to an event
+  ## Input is an array of states that respond the same to an event.
   let
     A = Registry[$automaton]
     E = $event
@@ -233,7 +235,7 @@ macro addConditionalTransitions*(
         event: typed{nkSym},
         outState: untyped{nkIdent},
         transitionFn: untyped
-        ) =
+      ) =
   ## Add a mapping (states, event) -> new state
   ##
   ## For states that respond the same to an event
@@ -334,6 +336,8 @@ proc nextStateOrBreak(
         event: NimNode,
         gotoState, breakState, stateExit: NimNode,
         newState, terminalState: State, transitionFn: NimNode) =
+  ## Dispatch to the next state
+  ## Special-case if it's the terminal state
   # if not newState.eqident(A.terminal):
   #   stateBody.add quote do:
   #     if `cbImpl`:
@@ -427,7 +431,7 @@ macro synthesize*(automaton, fnSignature: untyped): untyped =
       continue
     var stateBody = newStmtList()
 
-    # Handle the circuit breakers
+    # Handle the interrupts
     for cb in A.interrupts.getOrDefault(state):
       let newState = A.condTransitions[(state, cb)]
       let transFn = A.condTransitionsFn.getOrDefault((state, cb), noTransFn)

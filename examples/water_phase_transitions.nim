@@ -230,6 +230,11 @@ behavior(waterMachine):
 synthesize(waterMachine):
   proc observeWater(tempFeed: var seq[float])
 
+# Dump in graphviz format ".dot"
+# -------------------------------------------
+const dotRepr = toGraphviz(waterMachine)
+writeFile("water_phase_transitions.dot", dotRepr)
+
 # Running the machine
 # -------------------------------------------
 import random, sequtils

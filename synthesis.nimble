@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.1.0"
+version       = "0.2.0"
 author        = "Mamy André-Ratsimbazafy"
 description   = "A compile-time, compact, fast, without allocation, state-machine generator."
 license       = "MIT or Apache License 2.0"

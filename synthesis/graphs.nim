@@ -55,24 +55,31 @@ proc graphVizReprImpl(automaton: NimNode): string =
   # Making events/triggers have their own first-class node
   var eventLabels: string
   var interruptLabels: string
+  var eventDecl: string
+  var interruptDecl: string
   # Normal events
-  result.add indent & "node [shape = octagon, fontcolor=black, fillcolor=lightsteelblue, style=\"rounded,filled\"]; "
-  for state, events in A.triggers:
-    for event in events:
-      let nodeID = state & "_" & event
-      let nodeLabel = A.eventImpls[event].repr().replace("\x0a", "") # Somehow the string repr start with CR (\x0a)
-      result.add nodeID & " "
-      eventLabels.add indent & nodeID & " [label=\"" & event & "\\n" & nodeLabel & "\"]" & EOL
-  result.add EOL
+  if A.triggers.len > 0:
+    eventDecl.add indent & "node [shape = octagon, fontcolor=black, fillcolor=lightsteelblue, style=\"rounded,filled\"]; "
+    for state, events in A.triggers:
+      for event in events:
+        let nodeID = state & "_" & event
+        let nodeLabel = A.eventImpls[event].repr().replace("\x0a", "") # Somehow the string repr start with CR (\x0a)
+        eventDecl.add nodeID & " "
+        eventLabels.add indent & nodeID & " [label=\"" & event & "\\n" & nodeLabel & "\"]" & EOL
+    eventDecl.add EOL
+    result.add eventDecl
   # Interrupt events
-  result.add indent & "node [shape = diamond, fontcolor=black, fillcolor=coral, style=\"rounded,filled\"]; "
-  for state, interrupts in A.interrupts:
-    for interrupt in interrupts:
-      let nodeID = state & "_" & interrupt
-      let nodeLabel = A.eventImpls[interrupt].repr().replace("\x0a", "") # Somehow the string repr start with CR (\x0a)
-      result.add nodeID & " "
-      interruptLabels.add indent & nodeID & " [label=\"" & interrupt & "\\n" & nodeLabel & "\"]" & EOL
-  result.add EOL
+  if A.interrupts.len > 0:
+    interruptDecl.add indent & "node [shape = diamond, fontcolor=black, fillcolor=coral, style=\"rounded,filled\"]; "
+    for state, interrupts in A.interrupts:
+      for interrupt in interrupts:
+        let nodeID = state & "_" & interrupt
+        let nodeLabel = A.eventImpls[interrupt].repr().replace("\x0a", "") # Somehow the string repr start with CR (\x0a)
+        interruptDecl.add nodeID & " "
+        interruptLabels.add indent & nodeID & " [label=\"" & interrupt & "\\n" & nodeLabel & "\"]" & EOL
+    interruptDecl.add EOL
+    result.add interruptDecl
+
   result.add eventLabels
   result.add interruptLabels
 

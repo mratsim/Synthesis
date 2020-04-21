@@ -9,10 +9,21 @@ license       = "MIT or Apache License 2.0"
 
 requires "nim >= 1.0.4"
 
-proc test(path: string, lang = "c") =
+proc test(flags, path: string) =
   if not dirExists "build":
     mkDir "build"
-  exec "nim " & lang & " --outdir:build -r " & path
+  # Note: we compile in release mode. This still have stacktraces
+  #       but is much faster than -d:debug
+
+  # Compilation language is controlled by TEST_LANG
+  var lang = "c"
+  if existsEnv"TEST_LANG":
+    lang = getEnv"TEST_LANG"
+
+  echo "\n========================================================================================"
+  echo "Running [ ", lang, " ", flags, " ] ", path
+  echo "========================================================================================"
+  exec "nim " & lang & " " & flags & " -d:release --outdir:build -r " & path
 
 task test, "Run Synthesis tests":
-  test "examples/water_phase_transitions.nim"
+  test "", "examples/water_phase_transitions.nim"

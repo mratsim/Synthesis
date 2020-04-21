@@ -63,7 +63,11 @@ setEpilogue(waterMachine):
 # to trigger state transitions.
 #
 # Events have visibility over the following variables:
-# - The parameters of the synthesized state machine
+# - The parameters of the synthesized state machine in our case it is `tempFeed`
+#   ```
+#   synthesize(waterMachine):
+#     proc observeWater(tempFeed: var seq[float])
+#   ```
 # - The variables created in `setPrologue`
 # - The variables created in `onEntry`. Keep in mind
 #   that `onEntry` in state-specific and that

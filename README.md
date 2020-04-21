@@ -93,6 +93,34 @@ type AwaitEvent = enum
   - [References](#references)
 
 ## Commented example: Water phases
+
+The example below gives you a short overview of how to build your state machine.
+
+Recipe:
+- A state enum (called `Phase` in the example)
+- An event/trigger/condition enum (called `Event`)
+- Declaring a state machine
+- Declaring prologue, epilogue, initial state, terminal state. SOme are optional
+- Implement your events. Those are boolean tests.
+  Events have visibility on variables declared
+  - in the prologue
+  - in `onEntry`
+  - and the synthesized function parameters (here `tempFeed`).
+    ```Nim
+    synthesize(waterMachine):
+      proc observeWater(tempFeed: var seq[float])
+    ```
+- Implement common setup and teardown on state entry and exit if needed
+- Describe behaviours (i.e. state to state transition):
+  - Transition without condition
+  - Conditional transition due to an event
+  - "Interrupt" which is a conditional transition that shortcuts regular control flow
+    and allow handling exceptional cases, for example reaching the end of the `tempFeed` sequence.
+- Synthesize the state machine
+- Run it
+- ...
+- Profit!
+
 ```Nim
 type Phase = enum
   ## States of your automaton.
@@ -100,7 +128,9 @@ type Phase = enum
   Solid
   Liquid
   Gas
-  Plasma # Plasma is almost unused
+  # Plasma is unused. On the graph display, it will not be reachable from the InitialState.
+  # The graph will also show that transitions out of the Plasma state are undefined via an `unreachable` transition.
+  Plasma
 
 type Event = enum
   ## Named events. They will be associated with a boolean expression.
@@ -283,7 +313,8 @@ Output of the waterMachine
 
 ![water state transitions](examples/water_phase_transitions.png)
 
-Alternative to Graphviz can be used on the `.dot` files if the output is unsatisfactory. Remember that graph node placement is usually an NP-complete task and requires heuristics to be solved that may not be optimal for your specific graph. In that case consider splitting your finite state machine hence building hierarchical state machines.
+Alternatives to Graphviz can be used on the `.dot` files if the output is unsatisfactory. Remember that graph node placement is usually an NP-complete task and requires heuristics to be solved that may not be optimal for your specific graph.
+In that case consider splitting your finite state machine hence building hierarchical state machines.
 
 ## Technical constraints
 

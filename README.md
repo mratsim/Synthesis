@@ -6,16 +6,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 ![Stability: experimental](https://img.shields.io/badge/stability-experimental-orange.svg)
 
-This is a support library for the [Weave](https://github.com/mratsim/weave) multithreading runtime.
-Requirements for a multithreading runtime makes Synthesis also an excellent fit
-to generate state machines for embedded devices, protocols
-and managing complex event-driven workloads in general.
+## Overview
 
 This package exports a set of macros to synthesize static procedure-based automata from
 a declarative description of states, triggers and transitions
 with all states, triggers and transitions known at compile-time.
 
-It is fast, composable, generates compact code and does not allocate on the heap.
+It is fast, composable, threadsafe, generates compact code and does not allocate on the heap.
 
 Within each states you also have the full power
 of the Nim language instead of being restricted to only operations
@@ -27,7 +24,75 @@ introduce a stack of past states to create a pushdown automata (for parsing Brai
 
 A detailed usage tutorial is available at [examples/water_phase_transitions.nim](). It is executable.
 
-Snippets:
+This is a support library for the [Weave](https://github.com/mratsim/weave) multithreading runtime.
+Requirements for a multithreading runtime makes Synthesis also an excellent fit
+to generate state machines for embedded devices, protocols
+and managing complex event-driven workloads in general.
+
+## Appetizers
+
+Here are 2 simple examples of the usage of Synthesis in production code to implement components of the Weave multithreading runtime.
+
+### Worker state machine
+
+[Source](https://github.com/mratsim/weave/blob/4493b493/weave/work_fsm.nim)
+
+This is the description of the transitions of a worker thread that ran out of tasks in its own task queue
+and checks if it managed to steal tasks from other threads. (The theft is handled in another state machine.)
+
+```Nim
+type
+  RecvTaskState = enum
+    RT_CheckChannel
+    RT_FoundTask
+
+  RT_Event = enum
+    RTE_CheckedAllChannels
+    RTE_FoundTask
+    RTE_isWaiting
+```
+
+![worker thread FSA](media/work_fsm.png)
+
+### sync (await) a task that may be spawned on another thread
+
+[Source](https://github.com/mratsim/weave/blob/4493b493/weave/await_fsm.nim)
+
+This is the description of the transitions of any thread that syncs (awaits) a future that may be handled in another thread.
+
+In summary, while the awaited task has child tasks still pending in this worker thread, those are processed in priority,
+otherwise, it steals tasks from other threads to help them on their workload.
+As soon as the future is ready, it exits.
+
+```Nim
+type AwaitState = enum
+  AW_CheckTask
+  AW_OutOfChildTasks
+  AW_Steal
+  AW_SuccessfulTheft
+
+type AwaitEvent = enum
+  AWE_FutureReady
+  AWE_HasChildTask
+  AWE_ReceivedTask
+```
+
+![sync/await FSA](media/await_fsm.png)
+
+## Table of Contents
+
+- [Synthesis](#synthesis)
+  - [Overview](#overview)
+  - [Appetizers](#appetizers)
+    - [Worker state machine](#worker-state-machine)
+    - [sync (await) a task that may be spawned on another thread](#sync-await-a-task-that-may-be-spawned-on-another-thread)
+  - [Table of Contents](#table-of-contents)
+  - [Commented example: Water phases](#commented-example-water-phases)
+  - [Displaying the state machine](#displaying-the-state-machine)
+  - [Technical constraints](#technical-constraints)
+  - [References](#references)
+
+## Commented example: Water phases
 ```Nim
 type Phase = enum
   ## States of your automaton.
